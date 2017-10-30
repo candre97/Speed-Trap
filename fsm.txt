@@ -1,0 +1,137 @@
+`timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company: 
+// Engineer: 
+// 
+// Create Date:    12:39:57 09/28/2016 
+// Design Name: 
+// Module Name:    cwalk_fsm 
+// Project Name: 
+// Target Devices: 
+// Tool versions: 
+// Description: 
+//
+// Dependencies: 
+//
+// Revision: 
+// Revision 0.01 - File Created
+// Additional Comments: 
+//
+//////////////////////////////////////////////////////////////////////////////////
+module cwalk_fsm(
+    input clk,
+    input reset,
+    input c7,
+    input tc,
+    output walk,
+    output hand,
+    output num_on,
+    output [3:0] num
+    );
+	 
+	 wire tc0,tc1,tc2;
+	 wire [3:0] cnt_0, cnt_1, cnt_2;
+	 wire [3:0] preload0;
+	 wire cntEn0, cntEn1, cntEn2;
+	 wire cntRst0, cntRst1, cntRst2;
+	 wire nsl0_1, nsl1_2, nsl2_0;
+	 wire [3:0] countdown;
+	 
+	// just using the normal tc's but having access to em i guess
+	 assign tc0 = cnt_0[3] & cnt_0[2] & cnt_0[1] & cnt_0[0];
+	 assign tc1 = cnt_1[3] & cnt_1[2] & cnt_1[1] & cnt_1[0];
+	 assign tc2 = cnt_2[3] & cnt_2[2] & cnt_2[1] & cnt_2[0];
+	 
+	 
+	 
+	 // going from 0 state to 1 state:
+	 assign nsl0_1 = (tc0 & cntEn0) + ~tc0 & cntEn1; 
+	 
+	 // state 1 to state 2:
+	 assign nsl1_2 = (~cnt_0[3] & cnt_0[2] & cnt_0[1] & cnt_0[0] & cntEn1);
+	 
+	 // state 2 back to state 0:
+	 assign nsl2_0 = (tc2 & cntEn2) + (~cntEn0 & ~cntEn1 & ~cntEn2);
+	 
+	 
+	// make sure that the clocks do not run at the same time
+	
+	// assign the outputs
+	assign walk = cntEn0;
+	assign hand = cntEn2 + (cntEn1 & cnt_1[0]);
+	assign num_on = cntEn1;
+
+	
+	// the preloaded value for counter 1. 
+	 assign preload0[3] = 0;
+	 assign preload0[2] = 1;
+	 assign preload0[1] = 1;
+	 assign preload0[0] = 1;
+	 
+	 // do some logic before this to count down
+	 
+	 assign num = countdown; 
+	 
+	 
+	 // walk state
+	dff1 ff0(
+    .clk(clk),
+    .clr(1'b0),
+	 .set(reset),
+    .d(nsl2_0),
+    .q(cntEn0)
+    );
+	 
+	 // blinking hand state
+	 dff1 ff1(
+    .clk(clk),
+    .clr(1'b0),
+	 .set(reset),
+    .d(nsl0_1),
+    .q(cntEn1)
+    );
+	 
+	 // going into the solid hand state
+	 dff1 ff2(
+    .clk(clk),
+    .clr(1'b0),
+	 .set(reset),
+    .d(nsl1_2),
+    .q(cntEn2)
+    );
+	 
+	 cntr4 c0(
+    .clk(clk),
+    .reset(rstCnt0),
+    .pe(1'b0),
+    .p(4'b0000),
+    .ce(cntEn0),
+    .q(cnt_0),
+    .tc(tc0)
+    );
+	
+	cntr4 c1(
+    .clk(clk),
+    .reset(reset),
+    .pe(1'b0),
+    .p(4'b0000),
+    .ce(cntEn1),
+    .q(cnt_1),
+    .tc(tc1)
+    );
+
+	cntr4 c2(
+    .clk(clk),
+    .reset(reset),
+    .pe(1'b0),
+    .p(4'b0000),
+    .ce(cntEn2),
+    .q(cnt_2),
+    .tc(tc2)
+    );
+
+	 
+	 
+	 // You may change the I/O signals above if you don't need certain outputs, etc.
+
+endmodule
